@@ -165,7 +165,7 @@ goto repair
 
 :kernel_ok
 set "sys_pass="
-for /f "tokens=2 delims==" %%a in ('findstr /i /c:"SYSTEM =" "%kernel_path%" 2^>nul') do set "sys_pass=%%a"
+for /f "tokens=2 delims==" %%a in ('findstr /i /c:"SERVER =" "%kernel_path%" 2^>nul') do set "sys_pass=%%a"
 if "%sys_pass%"=="" color 4f & echo [ FATAL ERROR ] KERNEL_DATA_CORRUPT & pause & goto bsod
 
 if not exist "%reg_path%" goto bsod 
