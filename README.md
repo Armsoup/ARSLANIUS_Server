@@ -9,22 +9,36 @@ This edition follows one simple rule: you are SERVER. SERVER does everything. If
 What's Removed
 
 · Background services (SysPulse, SFC_Daemon)
+
 · ArsStore, miner.game, Calculator
+
 · sysinfo, dash, colorful user themes
+
 · SYSTEM ADMINISTRATOR and GUEST accounts
+
 
 What's Left
 
 · BarOS AUTHORITY\SERVER — the one and only admin
+
 · adduser / deluser — for those rare cases when you need another user
+
 · Full file manager (fmx)
+
 · Registry editor (regedit)
+
 · System file checker (sfc_scan)
+
 · Restore points and system restore
+
 · Internal mail system
+
 · HTML reports
+
 · Event viewer
+
 · Service manager
+
 · ARSLANIUS Archive tools (as-pack / as-unpack)
 
 How to Run
