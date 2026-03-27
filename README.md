@@ -6,7 +6,7 @@ ARSLANIUS Server is a stripped-down version of ARSLANIUS 22 designed for those w
 
 This edition follows one simple rule: you are SERVER. SERVER does everything. If you need another user, add one. If not, don't.
 
-[DESKTOP VERSION(https://github.com/Armsoup/ARSLANIUS)]
+[DESKTOP VERSION](https://github.com/Armsoup/ARSLANIUS)
 
 What's Removed
 
