@@ -4,6 +4,24 @@ The "No-Bullshit" Edition
 
 ARSLANIUS Server is a stripped-down version of ARSLANIUS 22 designed for those who don't need desktop fluff. No background services, no ArsStore, no miner.game, no sysinfo, no dash. Just one privileged account that actually has permissions and the ability to create regular users if someone really needs them.
 
+ARSLANIUS 22 Server/
+
+├─ ARSLANIUS 22 Server.cmd
+
+├─ Settings And Server Files/
+
+│  ├─ kernel.dll
+
+│  ├─ REG.cfg
+
+│  ├─ server.log
+
+│  └─ systemprofile/
+
+├─ Server Users/
+
+└─ RestorePoints/
+
 This edition follows one simple rule: you are SERVER. SERVER does everything. If you need another user, add one. If not, don't.
 
 [DESKTOP VERSION](https://github.com/Armsoup/ARSLANIUS)
