@@ -1,21 +1,20 @@
 
 @echo off
 setlocal enabledelayedexpansion
-title ARSLANIUS 22 Server
+title ARSLANIUS 22 Server 2
 
 set "root_path=%~dp0"
 if "%root_path:~-1%"=="\" set "root_path=%root_path:~0,-1%"
 
-set "Build=1.0"
+set "Build=1.1"
 set "base_build=52.1"
 set "current_build=Build %base_build% Server Build %Build%"
-set "kernel_path=%root_path%\Setting And System Files\kernel.dll"
-set "users_root=%root_path%\Users"
-set "programs_root=%root_path%\Programs"
-set "sys_prof=%root_path%\Setting And System Files\systemprofile"
-set "sys_services=%root_path%\Setting And System Files\systemprofile"
-set "reg_path=%root_path%\Setting And System Files\REG.cfg"
-set "log_path=%root_path%\Setting And System Files\system.log"
+set "kernel_path=%root_path%\Settings And Server Files\kernel.dll"
+set "users_root=%root_path%\Server Users"
+set "sys_prof=%root_path%\Settings And Server Files\systemprofile"
+set "sys_services=%root_path%\Settings And Server Files\systemprofile"
+set "reg_path=%root_path%\Settings And Server Files\REG.cfg"
+set "log_path=%root_path%\Settings And Server Files\server.log"
 set "restore_root=%root_path%\RestorePoints"
 
 :boot
@@ -69,7 +68,7 @@ goto recovery_env
 :startup_repair
 echo.
 echo [ WAIT ] Running Startup Repair...
-if not exist "%root_path%\Setting And System Files" md "%root_path%\Setting And System Files"
+if not exist "%root_path%\Settings And Server Files" md "%root_path%\Settings And Server Files"
 if not exist "%sys_services%" md "%sys_services%" 2>nul
 
 call :hash "On_isArslanius_Server"
@@ -79,14 +78,14 @@ echo OS_NAME = ARSLANIUS 22 Server > "%reg_path%"
 echo SYSTEM_COLOR=4f >> "%reg_path%"
 echo USER_COLOR=4f >> "%reg_path%"
 
-echo [%date% %time%] KERNEL_RESTORED_BY_RECOVERY >> "%log_path%" 2>nul
+echo [%date% %time% INFO] KERNEL_RESTORED_BY_RECOVERY >> "%log_path%" 2>nul
 echo.
 echo [ OK ] Startup Repair completed.
 pause
 goto repair
 
 :restore_menu
-if not exist "%root_path%\Setting And System Files" md "%root_path%\Setting And System Files"
+if not exist "%root_path%\Settings And Server Files" md "%root_path%\Settings And Server Files"
 if not exist "%restore_root%" (
     echo [ ERROR ] No restore points directory.
     pause & goto repair 
@@ -106,7 +105,7 @@ if not exist "%restore_root%\%rp_sel%\kernel.dll" (
 
 copy /y "%restore_root%\%rp_sel%\kernel.dll" "%kernel_path%" >nul
 copy /y "%restore_root%\%rp_sel%\REG.cfg" "%reg_path%" >nul
-copy /y "%restore_root%\%rp_sel%\system.log" "%log_path%" >nul
+copy /y "%restore_root%\%rp_sel%\server.log" "%log_path%" >nul
 
 echo [%date% %time% INFO] RESTORE_APPLIED_FROM_RECOVERY: %rp_sel% >> "%log_path%" 2>nul
 echo.
@@ -281,8 +280,8 @@ echo.
 set "u_in=" & set "p_in="
 set /p "u_in=Username: "
 
-if /i "%u_in%"=="Shutdown" echo [%date% %time% INFO] SHUTDOWN_FROM_LOGON >> "%log_path%" & exit
-if /i "%u_in%"=="Reboot" echo [%date% %time% INFO] REBOOT_FROM_LOGON >> "%log_path%" & goto boot
+if /i "%u_in%"=="Shutdown" goto shutdown_with_reason
+if /i "%u_in%"=="Reboot" goto reboot_with_reason
 
 if "%u_in%"=="" goto logon_screen
 set /p "p_in=Password: "
@@ -432,8 +431,8 @@ if /i "%ex_c%"=="ver" echo %os_name% [%current_build%] & goto cmd_loop
 if /i "%ex_c%"=="Notepad" start notepad.exe & goto cmd_loop
 if /i "%ex_c%"=="MiniDOS" start "" "%root_path%\Setting And System Files\MiniDOS.SYSTEM.Files\RS-DOS.bat" & goto cmd_loop
 if /i "%ex_c%"=="CreatedFolder" md "NewFolder" & echo [ OK ] Folder created. & goto cmd_loop
-if /i "%ex_c%"=="reboot" goto boot
-if /i "%ex_c%"=="Shutdown"  exit
+if /i "%ex_c%"=="Shutdown" goto shutdown_with_reason
+if /i "%ex_c%"=="reboot" goto reboot_with_reason
 
 echo "%ex_c%" is not recognized.
 goto cmd_loop
@@ -453,7 +452,7 @@ set "report_f=%user_home%\Report_v22.html"
 echo ^<html^>^<body style='background:#111;color:#0f0;font-family:monospace'^> > "%report_f%"
 echo ^<h1^>ARSLANIUS 22 - SYSTEM REPORT^</h1^> >> "%report_f%"
 echo ^<hr^>^<p^>Build: %current_build%^</p^> >> "%report_f%"
-echo ^<p^>Kernel: 18.1^</p^> >> "%report_f%"
+echo ^<p^>Kernel: 18.2^</p^> >> "%report_f%"
 echo ^<p^>Active User: %current_user%^</p^> >> "%report_f%"
 echo ^<p^>Log Size: %lsize% bytes^</p^> >> "%report_f%"
 echo ^<h2^>Registered Users:^</h2^>^<pre^> >> "%report_f%"
@@ -715,8 +714,8 @@ if NOT exist "%kernel_path%" (set "errors=1" & echo [ FAIL ] kernel.dll MISSING)
 echo [ WAIT ] Checking: REG.cfg...
 if NOT exist "%reg_path%" (set "errors=1" & echo [ FAIL ] REG.cfg MISSING) else (echo [  OK  ] REG.cfg)
 
-echo [ WAIT ] Checking: system.log...
-if NOT exist "%log_path%" (set "errors=1" & echo [ FAIL ] system.log MISSING) else (echo [  OK  ] system.log)
+echo [ WAIT ] Checking: server.log...
+if NOT exist "%log_path%" (set "errors=1" & echo [ FAIL ] server.log MISSING) else (echo [  OK  ] server.log)
 
 if "%errors%"=="0" (
     echo.
@@ -732,7 +731,7 @@ goto cmd_loop
 
 :sfc_repair
 echo [ WAIT ] Repairing system files...
-if not exist "%root_path%\Setting And System Files" md "%root_path%\Setting And System Files" 2>nul
+if not exist "%root_path%\Settings And Server Files" md "%root_path%\Settings And Server Files" 2>nul
 if NOT exist "%kernel_path%" (
     call :hash "On_isArslanius_Server"
 echo SERVER = !errorlevel! >> "%kernel_path%"
@@ -774,6 +773,74 @@ for /f "usebackq delims=" %%l in ("%arc_sel%") do (
 )
 goto cmd_loop
 
+:shutdown_with_reason
+cls
+echo ======================================================================================================================
+echo                                       SCHEDULED SHUTDOWN
+echo ======================================================================================================================
+echo.
+echo Select shutdown reason:
+echo.
+echo [1] Hardware maintenance (CPU, RAM, disk replacement)
+echo [2] Software update (OS, drivers, applications)
+echo [3] Security update (patches, hotfixes)
+echo [4] Application installation / removal
+echo [5] Scheduled maintenance (regular upkeep)
+echo [6] Power failure / UPS initiated
+echo [7] The computer got so bad it decided to end its suffering
+echo.
+set /p "shut_reason=Enter reason number (1-7): "
+
+if "%shut_reason%"=="1" set "reason_txt=Hardware maintenance"
+if "%shut_reason%"=="2" set "reason_txt=Software update"
+if "%shut_reason%"=="3" set "reason_txt=Security update"
+if "%shut_reason%"=="4" set "reason_txt=Application installation/removal"
+if "%shut_reason%"=="5" set "reason_txt=Scheduled maintenance"
+if "%shut_reason%"=="6" set "reason_txt=Power failure / UPS initiated"
+if "%shut_reason%"=="7" set "reason_txt=The computer got so bad it decided to end its suffering"
+if "%shut_reason%"=="" goto shutdown_with_reason
+
+echo [%date% %time% INFO] SHUTDOWN_INITIATED_BY: %current_user% >> "%log_path%" 2>nul
+echo [%date% %time% INFO] SHUTDOWN_REASON: !reason_txt! >> "%log_path%" 2>nul
+echo.
+echo [ OK ] Shutdown reason recorded. System will now shut down.
+timeout /t 2 >nul
+exit
+
+:reboot_with_reason
+cls
+echo ======================================================================================================================
+echo                                       SCHEDULED RESTART
+echo ======================================================================================================================
+echo.
+echo Select restart reason:
+echo.
+echo [1] Hardware maintenance (CPU, RAM, disk replacement)
+echo [2] Software update (OS, drivers, applications)
+echo [3] Security update (patches, hotfixes)
+echo [4] Application installation / removal
+echo [5] Scheduled maintenance (regular upkeep)
+echo [6] System hang / performance recovery
+echo [7] The computer got so bad it decided to end its suffering
+echo.
+set /p "reboot_reason=Enter reason number (1-7): "
+
+if "%reboot_reason%"=="" goto reboot_with_reason
+if "%reboot_reason%"=="1" set "reason_txt=Hardware maintenance"
+if "%reboot_reason%"=="2" set "reason_txt=Software update"
+if "%reboot_reason%"=="3" set "reason_txt=Security update"
+if "%reboot_reason%"=="4" set "reason_txt=Application installation/removal"
+if "%reboot_reason%"=="5" set "reason_txt=Scheduled maintenance"
+if "%reboot_reason%"=="6" set "reason_txt=System hang / performance recovery"
+if "%reboot_reason%"=="7" set "reason_txt=The computer got so bad it decided to end its suffering"
+
+echo [%date% %time% INFO] REBOOT_INITIATED_BY: %current_user% >> "%log_path%" 2>nul
+echo [%date% %time% INFO] REBOOT_REASON: !reason_txt! >> "%log_path%" 2>nul
+echo.
+echo [ OK ] Restart reason recorded. System will now reboot.
+timeout /t 2 >nul
+goto boot
+
 :help
 echo Apps: Notepad, Calc, taskmgr, edit, install, regedit, as-pack, as-unpack
 echo System: Help, Logout, Lock, sudo, cls, Shutdown, ver, fmx, whoami, reboot, clean, service, events, restore-point, restore, passwd
@@ -790,7 +857,7 @@ md "%restore_root%\%rp_name%" 2>nul
 
 copy /y "%kernel_path%" "%restore_root%\%rp_name%\kernel.dll" >nul
 copy /y "%reg_path%" "%restore_root%\%rp_name%\REG.cfg" >nul
-copy /y "%log_path%" "%restore_root%\%rp_name%\system.log" >nul
+copy /y "%log_path%" "%restore_root%\%rp_name%\server.log" >nul
 
 echo [%date% %time% INFO] RESTORE_POINT_CREATED: %rp_name% >> "%log_path%"
 echo [ OK ] Restore point created: %rp_name%
@@ -849,7 +916,7 @@ if not exist "%restore_root%\%rp_sel%\kernel.dll" (
 
 copy /y "%restore_root%\%rp_sel%\kernel.dll" "%kernel_path%" >nul
 copy /y "%restore_root%\%rp_sel%\REG.cfg" "%reg_path%" >nul
-copy /y "%restore_root%\%rp_sel%\system.log" "%log_path%" >nul
+copy /y "%restore_root%\%rp_sel%\server.log" "%log_path%" >nul
 
 echo [%date% %time% INFO] RESTORE_APPLIED: %rp_sel% >> "%log_path%"
 echo [ DONE ] System restored from %rp_sel%.
