@@ -71,7 +71,7 @@ How to Run
 
 Version
 
-Build 52.1 Server Build 1.0 — based on ARSLANIUS 22, stripped for server use.
+Build 52.1 Server Build 1.0/1.1 — based on ARSLANIUS 22, stripped for server use.
 
 Requirements
 
