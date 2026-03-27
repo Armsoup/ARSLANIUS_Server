@@ -429,7 +429,6 @@ if /i "%ex_c%"=="lock" goto logon_screen
 if /i "%ex_c%"=="cls" goto interface
 if /i "%ex_c%"=="ver" echo %os_name% [%current_build%] & goto cmd_loop
 if /i "%ex_c%"=="Notepad" start notepad.exe & goto cmd_loop
-if /i "%ex_c%"=="MiniDOS" start "" "%root_path%\Setting And System Files\MiniDOS.SYSTEM.Files\RS-DOS.bat" & goto cmd_loop
 if /i "%ex_c%"=="CreatedFolder" md "NewFolder" & echo [ OK ] Folder created. & goto cmd_loop
 if /i "%ex_c%"=="Shutdown" goto shutdown_with_reason
 if /i "%ex_c%"=="reboot" goto reboot_with_reason
@@ -842,9 +841,9 @@ timeout /t 2 >nul
 goto boot
 
 :help
-echo Apps: Notepad, Calc, taskmgr, edit, install, regedit, as-pack, as-unpack
+echo Apps: Notepad, taskmgr, edit, install, regedit, as-pack, as-unpack
 echo System: Help, Logout, Lock, sudo, cls, Shutdown, ver, fmx, whoami, reboot, clean, service, events, restore-point, restore, passwd
-echo Admin: CreatedFolder, MiniDOS, adduser, deluser, alert, report, reset, reboot_to_recovery
+echo Admin: CreatedFolder, adduser, deluser, alert, report, reset, reboot_to_recovery
 goto cmd_loop
 
 :restore_point
