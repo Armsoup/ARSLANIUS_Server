@@ -1,12 +1,12 @@
 
 @echo off
 setlocal enabledelayedexpansion
-title ARSLANIUS 22 Server 2
+title ARSLANIUS 22 Server 3
 
 set "root_path=%~dp0"
 if "%root_path:~-1%"=="\" set "root_path=%root_path:~0,-1%"
 
-set "Build=1.1"
+set "Build=1.2"
 set "base_build=52.1"
 set "current_build=Build %base_build% Server Build %Build%"
 set "kernel_path=%root_path%\Settings And Server Files\kernel.dll"
@@ -619,7 +619,7 @@ goto cmd_loop
 :deluser
 echo -- DELETE USER --
 set /p "du=Enter username: "
-if /i "%du%"=="BarOS AUTHORITY\SERVER" echo [ ERROR ] Restricted. & goto cmd_loop
+if /i "%du%"=="SERVER" echo [ ERROR ] Restricted. & goto cmd_loop
 if /i "%du%"=="%current_user%" echo [ ERROR ] Active session. & goto cmd_loop
 type "%kernel_path%" | findstr /v /i /c:"%du% =" > "%kernel_path%.tmp"
 move /y "%kernel_path%.tmp" "%kernel_path%" >nul
@@ -881,18 +881,16 @@ echo %et% >> "%ef%" & goto cmd_loop
 cls 
 echo ----------------------------------------------------------------------------------------------------------------------
 echo                                         1. Explorer (FMX)    4. Regedit (REG)
-echo                                         2. Reboot            5. Control (DASH)
-echo                                         3. ArsStore          0. Exit Menu
-echo ----------------------------------------------------------------------------------------------------------------------
-echo                                         [ Recent Apps: miner.game, notepad ]
+echo                                         2. Reboot            5. Logout
+echo                                         3. Shutdown          0. Exit Menu
 echo ----------------------------------------------------------------------------------------------------------------------
 set /p "win_c=Search or Select: "
 
 if "%win_c%"=="1" goto fmx
-if "%win_c%"=="2" goto boot
-if "%win_c%"=="3" goto store
+if "%win_c%"=="2" goto reboot_with_reason
+if "%win_c%"=="3" goto shutdown_with_reason
 if "%win_c%"=="4" goto regedit
-if "%win_c%"=="5" goto dash
+if "%win_c%"=="5" goto logon_screen
 if "%win_c%"=="0" goto cmd_loop
 goto start 
 
