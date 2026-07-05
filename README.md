@@ -26,9 +26,7 @@ ARSLANIUS 25 Server/
 
 This edition follows one simple rule: you are SERVER. SERVER does everything. If you need another user, add one. If not, don't.
 
-[DESKTOP VERSION](https://github.com/Armsoup/ARSLANIUS)
-
-[C++ version](https://github.com/Armsoup/ARSLANIUS_C-Plus_Plus)
+[DESKTOP VERSION](https://github.com/Armsoup/ARSLANIUS_C-Plus_Plus)
 
 What's Removed
 
