@@ -210,7 +210,6 @@ void check_AUTHORITY();
 void check_kernel();
 void check_registry();
 void check_BCD();
-void installapp(string_view app_id);
 void core(const string& cmd);
 bool checkHash(string_view input, string_view expectedHash);
 string calculateHash(string_view input);
@@ -461,46 +460,6 @@ void print_slow(string_view text) {
 	}
 	cout << endl;
 	timeEndPeriod(1);
-}
-
-void installapp(string_view app_id) {
-	if (app_id == "1") {
-		string appPath = programsRoot + "\\Scanner.bat";
-		stringstream app_install;
-		app_install << "@echo off" << endl;
-		app_install << "echo Scanning %cd%..." << endl;
-		app_install << "dir /s /b \"%cd%\" > \"%cd%\\scan_%date%.txt\"" << endl;
-		app_install << "echo Scan complete. Saved to scan_%date%.txt" << endl;
-		app_install << "pause" << endl;
-		app_install << "exit /b" << endl;
-		writeFile(appPath, app_install.str());
-	}
-	if (app_id == "2") {
-		string appPath = programsRoot + "\\Notes.bat";
-		stringstream app_install;
-		app_install << "@echo off" << endl;
-		app_install << "set /p txt=Enter text: " << endl;
-		app_install << "echo %txt% >> \"%cd%\\notes.txt\"" << endl;
-		app_install << "echo Note saved." << endl;
-		app_install << "pause" << endl;
-		app_install << "exit /b" << endl;
-		writeFile(appPath, app_install.str());
-	}
-	if (app_id == "3") {
-		string appPath = programsRoot + "\\Calc.bat";
-		stringstream app_install;
-		app_install << "@echo off" << endl;
-		app_install << "title Calculator" << endl;
-		app_install << "color 2f" << endl;
-		app_install << ":start" << endl;
-		app_install << "set /p sum=Please enter the question:" << endl;
-		app_install << "set /a ans=%sum%" << endl;
-		app_install << "echo The Answer=%ans%" << endl;
-		app_install << "pause" << endl;
-		app_install << "cls" << endl;
-		app_install << "goto start" << endl;
-		writeFile(appPath, app_install.str());
-	}
 }
 
 void check_kernel() {
@@ -1614,32 +1573,7 @@ void safeModeBoot() {
 	cout << endl << "[ INFO ] Safe Mode enabled." << endl;
 	Sleep(1000);
 
-	// Disable services
-	fs::remove(sysServices + "\\SysPulse.active");
-	fs::remove(sysServices + "\\TrustedInstaller.active");
-	fs::remove(sysServices + "\\NetMonitor.active");
-
 	logonScreen();
-}
-
-void diagnosticMode(int mode) {
-	diagnostic = mode;
-	safeMode = 0;
-	rec = 0;
-
-	// Disable some services
-	if (mode == 1) {
-		fs::remove(sysServices + "\\TrustedInstaller.active");
-		fs::remove(sysServices + "\\NetMonitor.active");
-		currentUser = "BarOS SERVICE\\SysPulse";
-	}
-	else if (mode == 2) {
-		fs::remove(sysServices + "\\SysPulse.active");
-		fs::remove(sysServices + "\\TrustedInstaller.active");
-		currentUser = "BarOS SERVICE\\NetMonitor";
-	}
-
-	interfaceScreen();
 }
 
 // =====================================================================
@@ -2002,11 +1936,6 @@ void arslogon(string_view authority) {
 		check_kernel();
 		string kernel_hash_check = readFile(kernelPath);
 		if (kernel_hash_check.find("SERVER = " + EXPECTED_SERVER_HASH) == string::npos) bsod("2");
-		if (requestFromResume == 1) {
-			if (currentUser == "BarOS SERVICE\\TrustedInstaller" ||
-				currentUser == "BarOS SERVICE\\SysPulse" ||
-				currentUser == "BarOS SERVICE\\NetMonitor") interfaceScreen();
-		}
 		string kernel = readFile(kernelPath);
 		istringstream iss(kernel);
 		string line;
@@ -2343,44 +2272,9 @@ void applyColor() {
 void interfaceScreen() {
 	if (currentUser != "KERNEL") saveBCD();
 
-	// Start services
-	if (safeMode == 0 && rec == 0 && diagnostic == 0 && currentUser != "KERNEL") {
-		if (!fileExists(sysServices + "\\SysPulse.active")) {
-			cout << "[ KERNEL ] Booting background service: BarOS SERVICE\\SysPulse..." << endl;
-			writeFile(sysServices + "\\SysPulse.active", "RUNNING");
-			Sleep(1000);
-		}
-		if (!fileExists(sysServices + "\\NetMonitor.active")) {
-			cout << "[ KERNEL ] Booting background service: BarOS SERVICE\\NetMonitor..." << endl;
-			writeFile(sysServices + "\\NetMonitor.active", "RUNNING");
-			Sleep(1000);
-		}
-		if (!fileExists(sysServices + "\\TrustedInstaller.active")) {
-			cout << "[ KERNEL ] Booting background service: BarOS SERVICE\\TrustedInstaller..." << endl;
-			writeFile(sysServices + "\\TrustedInstaller.active", "RUNNING");
-			Sleep(1000);
-		}
-	}
-
 	if (rec == 1) {
-		currentUser = "BarOS SERVICE\\TrustedInstaller";
-		fs::remove(sysServices + "\\SysPulse.active");
-		fs::remove(sysServices + "\\NetMonitor.active");
-		userHome = sysServices + "\\TrustedInstaller";
-		fs::create_directories(userHome);
-	}
-	if (diagnostic == 1) {
-		currentUser = "BarOS SERVICE\\SysPulse";
-		fs::remove(sysServices + "\\TrustedInstaller.active");
-		fs::remove(sysServices + "\\NetMonitor.active");
-		userHome = sysServices + "\\SysPulse";
-		fs::create_directories(userHome);
-	}
-	if (diagnostic == 2) {
-		currentUser = "BarOS SERVICE\\NetMonitor";
-		fs::remove(sysServices + "\\SysPulse.active");
-		fs::remove(sysServices + "\\TrustedInstaller.active");
-		userHome = sysServices + "\\NetMonitor";
+		currentUser = "BarOS\\KERNEL";
+		userHome = sysServices;
 		fs::create_directories(userHome);
 	}
 	if (currentUser == "KERNEL") {
@@ -2442,83 +2336,6 @@ void interfaceScreen() {
 
 void cmdLoop() {
 	while (true) {
-		// services
-		if (safeMode == 0 && rec == 0 && diagnostic == 0 && currentUser != "BarOS\\KERNEL") {
-			if (!dirExists(sysServices)) fs::create_directories(sysServices);
-			if (!fileExists(sysServices + "\\TrustedInstaller.active")) {
-				writeFile(sysServices + "\\TrustedInstaller.active", "RUNNING");
-			}
-			if (fileExists(sysServices + "\\TrustedInstaller.active")) {
-				int ins_err = 0;
-				if (!fileExists(kernelPath)) ins_err = 1;
-				if (!fileExists(regPath)) ins_err = 1;
-				if (!fileExists(configRoot + "\\BCD")) ins_err = 1;
-
-				if (ins_err == 1) {
-					cout << "[BarOS SERVICE\\TrustedInstaller] Integrity violation detected!" << endl;
-					cout << "[BarOS SERVICE\\TrustedInstaller] Executing background repair..." << endl;
-					if (!fileExists(kernelPath)) {
-						stringstream kernel_ins;
-						kernel_ins << "SERVER = 4c312fd893fd392b7e38f0c4ea6d7f7003e0455d04c901f55749d2bc2cec8ddc" << endl;
-						writeFile(kernelPath, kernel_ins.str());
-					}
-					if (!fileExists(configRoot + "\\BCD")) {
-						saveBCD();
-					}
-					if (!fileExists(regPath)) {
-						stringstream reg_ins;
-						reg_ins << "OS_NAME=ARSLANIUS 30" << endl;
-						reg_ins << "SYSTEM_COLOR=0e" << endl;
-						reg_ins << "ADMIN_COLOR=4f" << endl;
-						reg_ins << "USER_COLOR=1f" << endl;
-						reg_ins << "ENABLE_LUA=1" << endl;
-						reg_ins << "LOCKDOWN=1" << endl;
-						reg_ins << "ADMIN_USER=" << endl;
-						reg_ins << "SETUP=1" << endl;
-						reg_ins << "REG_VERSION=" << REG_VERSION << endl;
-						writeFile(regPath, reg_ins.str());
-						cout << "[BarOS SERVICE\\TrustedInstaller] System restored." << endl;
-						writeLog("BarOS SERVICE\\TrustedInstaller: AUTO_REPAIR_SUCCESS");
-					}
-				}
-			}
-			if (fileExists(sysServices + "\\SysPulse.active")) {
-				int PulseCheck = rand() % 10;
-				if (PulseCheck == 5) {
-					writeLog("BarOS SERVICE\\SYSPULSE: System Health OK");
-				}
-				const size_t MAX_LOG_SIZE_SYS = 10240;
-				HANDLE hLogF = CreateFileA(logPath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-				if (hLogF != INVALID_HANDLE_VALUE) {
-					LARGE_INTEGER fileSize;
-					if (GetFileSizeEx(hLogF, &fileSize)) {
-						if (fileSize.QuadPart > MAX_LOG_SIZE_SYS) {
-							CloseHandle(hLogF);
-							fs::remove(logPath);
-							writeLog("BarOS SERVICE\\SYSPULSE: LOG_CLEARED");
-						}
-					}
-					CloseHandle(hLogF);
-				}
-			}
-			if (fileExists(sysServices + "\\NetMonitor.active")) {
-				int NetCheck = rand() % 10;
-				if (NetCheck == 5) {
-					string host = "github.com";
-					string NetCheckS = "ping -n 1 " + host + " >nul 2>&1";
-					int NetCheckResult = system(NetCheckS.c_str());
-					if (NetCheckResult != 0) {
-						cout << "BarOS SERVICE\\NETMONITOR: OFFLINE" << endl;
-						writeLog("BarOS SERVICE\\NETMONITOR: OFFLINE");
-					}
-					else {
-						cout << "BarOS SERVICE\\NETMONITOR: ONLINE" << endl;
-						writeLog("BarOS SERVICE\\NETMONITOR: ONLINE");
-
-					}
-				}
-			}
-		}
 		// Prompt
 		sudo_command = 0;
 		cout << currentUser << "@ARSLANIUS> ";
@@ -2532,10 +2349,7 @@ void cmdLoop() {
 				while (GetAsyncKeyState(VK_SHIFT) & 0x8000) {
 					Sleep(50);
 				}
-				if (currentUser != "BarOS SERVICE\\TrustedInstaller" &&
-					currentUser != "BarOS SERVICE\\SysPulse" &&
-					currentUser != "BarOS SERVICE\\NetMonitor" &&
-					currentUser != "BarOS\\KERNEL") {
+				if (currentUser != "BarOS\\KERNEL") {
 					arslogon("SecureAS_lockmenu");
 					break;
 				}
@@ -2548,10 +2362,7 @@ void cmdLoop() {
 				while (GetAsyncKeyState('K') & 0x8000) {
 					Sleep(50);
 				}
-				if (currentUser != "BarOS SERVICE\\TrustedInstaller" &&
-					currentUser != "BarOS SERVICE\\SysPulse" &&
-					currentUser != "BarOS SERVICE\\NetMonitor" &&
-					currentUser != "BarOS\\KERNEL") {
+				if (currentUser != "BarOS\\KERNEL") {
 					BarOSkrnl("reload");
 					break;
 				}
@@ -2593,19 +2404,10 @@ void core(const string& cmd) {
 		arslogon("emergency_reboot");
 	}
 	if (cmd == "arslogon") {
-		if (currentUser != "BarOS SERVICE\\TrustedInstaller" &&
-			currentUser != "BarOS SERVICE\\SysPulse" &&
-			currentUser != "BarOS SERVICE\\NetMonitor"
-			) {
-			arslogon("");
-		}
+		arslogon("");
 	}
 	if (cmd == "lockmenu") {
-		if (currentUser != "BarOS SERVICE\\TrustedInstaller" &&
-			currentUser != "BarOS SERVICE\\SysPulse" &&
-			currentUser != "BarOS SERVICE\\NetMonitor" &&
-			currentUser != "BarOS\\KERNEL"
-			) {
+		if (currentUser != "BarOS\\KERNEL") {
 			arslogon("SecureAS_lockmenu");
 		}
 	}
@@ -2630,9 +2432,6 @@ void core(const string& cmd) {
 		}
 		if (currentUser == "BarOS AUTHORITY\\SERVER" ||
 			currentUser == "BarOS\\KERNEL" ||
-			currentUser == "BarOS SERVICE\\TrustedInstaller" ||
-			currentUser == "BarOS SERVICE\\SysPulse" ||
-			currentUser == "BarOS SERVICE\\NetMonitor" ||
 			currentUser == adminUser) {
 			ex_c = t_c;
 			core(ex_c);
@@ -2672,50 +2471,6 @@ void core(const string& cmd) {
 		}
 	}
 
-	if (currentUser == "BarOS SERVICE\\TrustedInstaller") {
-		bool allowed = false;
-		vector<string> tiCmds = { "help", "mv", "bcdboot", "license", "hibernate", "cp", "rm", "touch", "edit",
-								  "echo", "bcdedit", "mkdir", "ls", "cd", "cat", "ren",
-								  "reset", "reboot_to_recovery", "cls", "ver", "whoami",
-								  "events", "sfc", "adduser", "deluser", "regedit",
-								  "reboot", "shutdown" };
-		for (const string& c : tiCmds) {
-			if (ex_c == c) { allowed = true; break; }
-		}
-		if (!allowed) {
-			cout << "[ SECURITY ] Restricted." << endl;
-			return;
-		}
-	}
-
-	if (currentUser == "BarOS SERVICE\\SysPulse") {
-		bool allowed = false;
-		vector<string> spCmds = { "help", "ls", "sysinfo", "license", "hibernate", "events", "report", "echo",
-								  "taskmgr", "cd", "cat", "reboot", "shutdown",
-								  "reboot_to_recovery", "cls", "ver", "whoami" };
-		for (const string& c : spCmds) {
-			if (ex_c == c) { allowed = true; break; }
-		}
-		if (!allowed) {
-			cout << "[ SECURITY ] Restricted." << endl;
-			return;
-		}
-	}
-
-	if (currentUser == "BarOS SERVICE\\NetMonitor") {
-		bool allowed = false;
-		vector<string> nmCmds = { "help", "reboot", "ping", "license", "hibernate", "netstat", "ipconfig",
-								  "echo", "tracert", "nslookup", "arp", "route",
-								  "shutdown", "cls", "whoami" };
-		for (const string& c : nmCmds) {
-			if (ex_c == c) { allowed = true; break; }
-		}
-		if (!allowed) {
-			cout << "[ SECURITY ] Restricted." << endl;
-			return;
-		}
-	}
-
 	if (safeMode == 1) {
 		bool allowed = false;
 		vector<string> safeCmds = { "help", "lock", "wait_mode", "license", "hibernate", "lockmenu", "mv", "cp",
@@ -2738,9 +2493,6 @@ void core(const string& cmd) {
 		currentUser != "BarOS AUTHORITY\\SERVER" &&
 		currentUser != "BarOS\\KERNEL" &&
 		currentUser != adminUser &&
-		currentUser != "BarOS SERVICE\\TrustedInstaller" &&
-		currentUser != "BarOS SERVICE\\SysPulse" &&
-		currentUser != "BarOS SERVICE\\NetMonitor" &&
 		sudo_command == 0) {
 		bool allowed = false;
 		vector<string> userCmds = { "help", "arsstore", "game.bsodrunner", "confeditor", "license", "as - pack", "hibernate", "as - unpack", "mkdir", "wait_mode", "echo", "lockmenu",
@@ -2761,7 +2513,7 @@ void core(const string& cmd) {
 	}
 
 	if (ex_c == "help" || ex_c == "?") {
-		cout << "Apps: Notepad, Calc, taskmgr, confeditor, license, edit, install, regedit, ArsStore, sysinfo, game.bsodrunner" << endl;
+		cout << "Apps: Notepad, Calc, taskmgr, confeditor, license, edit, install, regedit, sysinfo, game.bsodrunner" << endl;
 		cout << "System: Help, Lock, lockmenu, hibernate, sudo, cls, Shutdown, ver, whoami, reboot, clean, events, restore-point, restore, echo, passwd, backup, backup-restore, ls, wait_mode, cd, cat, ren, mkdir, touch, cp, rebootemer or arslogon -emergency reboot, mv, autorun" << endl;
 		cout << "Admin: adduser, deluser, alert, Guest, report, reset, reboot_to_recovery, bsod, rm, netstat, ipconfig, tracert, nslookup, arp, route, bcdboot, bcdedit" << endl;
 	}
@@ -2966,26 +2718,6 @@ void core(const string& cmd) {
 		mz_zip_reader_end(&zip);
 		writeLog("ARCHIVE_EXTRACTED: " + zipName);
 		cout << "[ OK ] Archive extracted." << endl;
-	}
-	else if (ex_c == "arsstore") {
-		clearScreen();
-		cout << "======================================================================================================================" << endl;
-		cout << "                                                    ARSLANIUS STORE[v2.0]" << endl;
-		cout << "======================================================================================================================" << endl;
-		cout << "Available Apps :" << endl;
-		cout << " [1] System Scanner(Utility)" << endl;
-		cout << " [2] NotePad Lite(Office)" << endl;
-		cout << " [3] Calc(Utility)" << endl;
-		cout << " [4] Exit Store" << endl;
-		cout << "----------------------------------------------------------------------------------------------------------------------" << endl;
-		cout << "Select number: ";
-		char choice = _getch();
-		cout << choice << endl;
-		if (choice == '1') installapp("1");
-		else if (choice == '2') installapp("2");
-		else if (choice == '3') installapp("3");
-		else if (choice == '4') interfaceScreen();
-		core("arsstore");
 	}
 	else if (ex_c == "guest-toggle") {
 		cout << "Enable Guest Mode? (Y/N): ";
@@ -3525,26 +3257,6 @@ void core(const string& cmd) {
 		cout << "  Kernel        : BarOS " << VersionBarOSkrnl << endl;
 		cout << "  Uptime        : " << getUptime() << endl;
 		cout << "  Safe Mode     : " << safeMode << endl;
-		cout << endl;
-		cout << "[SERVICES]" << endl;
-		if (fileExists(sysServices + "\\SysPulse.active")) {
-			cout << "  BarOS SERVICE\\SysPulse          : ONLINE" << endl;
-		}
-		else {
-			cout << "  BarOS SERVICE\\SysPulse          : OFFLINE" << endl;
-		}
-		if (fileExists(sysServices + "\\TrustedInstaller.active")) {
-			cout << "  BarOS SERVICE\\TrustedInstaller  : ONLINE" << endl;
-		}
-		else {
-			cout << "  BarOS SERVICE\\TrustedInstaller  : OFFLINE" << endl;
-		}
-		if (fileExists(sysServices + "\\NetMonitor.active")) {
-			cout << "  BarOS SERVICE\\NetMonitor        : ONLINE" << endl;
-		}
-		else {
-			cout << "  BarOS SERVICE\\NetMonitor        : OFFLINE" << endl;
-		}
 		pause();
 	}
 	else if (ex_c == "reboot_to_recovery") {
@@ -3758,9 +3470,6 @@ void shutdownScreen() {
 	writeLog("SHUTDOWN_REASON: " + reason_txt);
 	cout << endl;
 	cout << "[OK] Shutdown reason recorded. System will now shut down." << endl;
-	fs::remove(sysServices + "\\SysPulse.active");
-	fs::remove(sysServices + "\\TrustedInstaller.active");
-	fs::remove(sysServices + "\\NetMonitor.active");
 	Sleep(2000);
 	BarOSkrnl("ACPI");
 }
@@ -3797,9 +3506,6 @@ void rebootScreen() {
 	writeLog("REBOOT_REASON: " + reason_txt);
 	cout << endl;
 	cout << "[OK] Restart reason recorded. System will now reboot." << endl;
-	fs::remove(sysServices + "\\SysPulse.active");
-	fs::remove(sysServices + "\\TrustedInstaller.active");
-	fs::remove(sysServices + "\\NetMonitor.active");
 	Sleep(2000);
 	BarOSkrnl("ACPI");
 }
@@ -4255,12 +3961,6 @@ void BarOSkrnl(string_view Kernel_mode) {
 			}
 			cout << "                                                     -------------" << endl;
 			Sleep(230);
-		}
-		if (currentUser == "BarOS SERVICE\\TrustedInstaller" ||
-			currentUser == "BarOS SERVICE\\SysPulse" ||
-			currentUser == "BarOS SERVICE\\NetMonitor") {
-			fs::remove(configRoot + "\\hibernate.sys");
-			interfaceScreen();
 		}
 		if (currentUser == "BarOS AUTHORITY\\SERVER") currentUser = "SERVER";
 		clearScreen();
