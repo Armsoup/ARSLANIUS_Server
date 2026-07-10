@@ -116,11 +116,10 @@ MemoryGuard __memory_guard;
 // =====================================================================
 const string BASE_BUILD = "60.1.0";
 const string SERVER_BUILD = "3.0";
-const string CURRENT_BUILD = BASE_BUILD + "Server Build" + SERVER_BUILD;
+const string CURRENT_BUILD = BASE_BUILD + " Server Build " + SERVER_BUILD;
 const string REG_VERSION = "30";
 const string OS_NAME_DEFAULT = "ARSLANIUS 30";
-const string EXPECTED_SYSTEM_HASH = "57a98c0544492de7afb6aaa83cfa058c6b445e7c4c24127b13d2cfac748e1150";
-const string EXPECTED_ADMIN_HASH = "8e5a8afe96e11b2a6921cfd2af1dc2f1b78652a9a7c60de2d69cb2e523ca38da";
+const string EXPECTED_SERVER_HASH = "4c312fd893fd392b7e38f0c4ea6d7f7003e0455d04c901f55749d2bc2cec8ddc";
 const int BOOT_TIMEOUT_DEFAULT = 30;
 const int DEFAULT_MODE_DEFAULT = 1;
 const int MAX_LOGIN_ATTEMPTS = 10;
@@ -210,7 +209,6 @@ void print_slow(string_view text);
 void check_AUTHORITY();
 void check_kernel();
 void check_registry();
-void BSOD_Runner();
 void check_BCD();
 void installapp(string_view app_id);
 void core(const string& cmd);
@@ -336,7 +334,7 @@ void appendFile(const string& path, string_view content) {
 }
 
 string calculateHash(string_view input) {
-	const string_view secret_pepper = "Armsoup2026ARSLANIUS"; // Yes, due to the open source code, that secret phrase isn't actually secret at all, but the SYSTEM password is 26 characters long, so it still won't be possible to crack it : )
+	const string_view secret_pepper = "Armsoup2026ARSLANIUS";
 
 	string data = string(input) + string(secret_pepper);
 
@@ -465,132 +463,6 @@ void print_slow(string_view text) {
 	timeEndPeriod(1);
 }
 
-void BSOD_Runner() {
-	srand((unsigned)time(NULL));
-	const int H = 10, W = 20;
-	char field[H][W];
-	int files = 15, score = 0, level = 1;
-	int px = 0, py = 0, spawnInterval = 5;
-
-	for (int i = 0; i < H; i++)
-		for (int j = 0; j < W; j++)
-			field[i][j] = '.';
-
-	for (int i = 0; i < files; i++) {
-		int x, y;
-		do {
-			x = rand() % W;
-			y = rand() % H;
-		} while ((x == px && y == py) || field[y][x] == 'F');
-		field[y][x] = 'F';
-	}
-	field[py][px] = 'T';
-
-	auto lastSpawn = chrono::steady_clock::now();
-	auto lastLevelUp = chrono::steady_clock::now();
-
-	while (true) {
-		auto now = chrono::steady_clock::now();
-
-		if (chrono::duration_cast<chrono::seconds>(now - lastSpawn).count() >= spawnInterval) {
-			int x, y, attempts = 0;
-			do {
-				x = rand() % W;
-				y = rand() % H;
-				attempts++;
-			} while ((field[y][x] != '.' || (x == px && y == py)) && attempts < 100);
-			if (field[y][x] == '.') {
-				field[y][x] = 'F';
-				files++;
-				lastSpawn = now;
-			}
-		}
-
-		if (score > 0 && score % 10 == 0 && chrono::duration_cast<chrono::seconds>(now - lastLevelUp).count() >= 2) {
-			level++;
-			spawnInterval = max(1, spawnInterval - 1);
-			lastLevelUp = now;
-		}
-
-		clearScreen();
-		setColor("0f");
-		cout << "======================================================================================================================" << endl;
-		cout << "                                                    BSOD RUNNER" << endl;
-		cout << "======================================================================================================================" << endl;
-		cout << "  Level: " << level << "  |  Score: " << score << "  |  Files: " << files << "/60" << endl;
-		cout << "----------------------------------------------------------------------------------------------------------------------" << endl;
-		for (int i = 0; i < H; i++) {
-			cout << "  ";
-			for (int j = 0; j < W; j++) cout << field[i][j];
-			cout << endl;
-		}
-		cout << "----------------------------------------------------------------------------------------------------------------------" << endl;
-		cout << "  WASD - Move  |  SPACE - Clean  |  Q/ESC - Quit" << endl;
-		cout << "======================================================================================================================" << endl;
-
-		char key = _getch();
-		if (key == 'q' || key == 27) applyColor();
-
-		int nx = px, ny = py;
-		if (key == 'w') ny--;
-		else if (key == 's') ny++;
-		else if (key == 'a') nx--;
-		else if (key == 'd') nx++;
-		else if (key == ' ') {
-			bool cleaned = false;
-			int dirs[4][2] = { {-1,0},{1,0},{0,-1},{0,1} };
-			for (int i = 0; i < 4; i++) {
-				int checkX = px + dirs[i][0];
-				int checkY = py + dirs[i][1];
-				if (checkX >= 0 && checkX < W && checkY >= 0 && checkY < H) {
-					if (field[checkY][checkX] == 'F') {
-						field[checkY][checkX] = '.';
-						files--;
-						score++;
-						cleaned = true;
-						break;
-					}
-				}
-			}
-			if (!cleaned) {
-				cout << "\nNo file nearby to clean!" << endl;
-				Sleep(200);
-			}
-			if (files == 0) {
-				setColor("2f");
-				cout << "\n======================================================================================================================" << endl;
-				cout << "                                                TEMP IS CLEAN! YOU WIN!" << endl;
-				cout << "======================================================================================================================" << endl;
-				cout << "  Final Score: " << score << "  |  Level: " << level << endl;
-				cout << "======================================================================================================================" << endl;
-				break;
-			}
-			continue;
-		}
-		else continue;
-
-		if (nx < 0 || nx >= W || ny < 0 || ny >= H) continue;
-
-		if (field[ny][nx] == 'F') {
-			cout << "\nCan't walk through files! Clean them first!" << endl;
-			Sleep(200);
-			continue;
-		}
-
-		field[py][px] = '.';
-		px = nx; py = ny;
-		field[py][px] = 'T';
-
-		if (files >= 60) {
-			bsod("");
-			break;
-		}
-	}
-	cout << "\n  Press any key to return to ARSLANIUS...";
-	char TEMP = _getch();
-	applyColor();
-}
-
 void installapp(string_view app_id) {
 	if (app_id == "1") {
 		string appPath = programsRoot + "\\Scanner.bat";
@@ -633,8 +505,7 @@ void installapp(string_view app_id) {
 
 void check_kernel() {
 	vector<string> linesToFind = {
-		"SYSTEM =",
-		"SYSTEM ADMINISTRATOR ="
+		"SERVER =",
 	};
 	string content = readFile(kernelPath);
 	string lowerContent = content;
@@ -684,7 +555,7 @@ void loader_errors(string_view code) {
 		cout << "Status: 0xc00000001a" << endl;
 		cout << "Info: CONFIG_ROOT_NOT_FOUND" << endl;
 		cout << endl;
-		cout << "File: \\Settings And System Files" << endl;
+		cout << "File: \\Settings And Server Files" << endl;
 		cout << endl;
 		cout << "======================================================================================================================" << endl;
 		pause();
@@ -702,7 +573,7 @@ void loader_errors(string_view code) {
 		cout << "Status: 0xc00000001" << endl;
 		cout << "Info: KERNEL_NOT_FOUND" << endl;
 		cout << endl;
-		cout << "File: \\Settings And System Files\\SAM" << endl;
+		cout << "File: \\Settings And Server Files\\SAM" << endl;
 		cout << endl;
 		cout << "======================================================================================================================" << endl;
 		pause();
@@ -718,9 +589,9 @@ void loader_errors(string_view code) {
 		cout << "the cause." << endl;
 		cout << endl;
 		cout << "Status: 0xc00000002" << endl;
-		cout << "Info: SYSTEM_ACCOUNT_HASH_MISMATCH" << endl;
+		cout << "Info: SERVER_ACCOUNT_HASH_MISMATCH" << endl;
 		cout << endl;
-		cout << "File: \\Settings And System Files\\SAM" << endl;
+		cout << "File: \\Settings And Server Files\\SAM" << endl;
 		cout << endl;
 		cout << "======================================================================================================================" << endl;
 		pause();
@@ -738,7 +609,7 @@ void loader_errors(string_view code) {
 		cout << "Status: 0xc00000003" << endl;
 		cout << "Info: REGISTRY_VERSION_MISMATCH" << endl;
 		cout << endl;
-		cout << "File: \\Settings And System Files\\REG.cfg" << endl;
+		cout << "File: \\Settings And Server Files\\REG.cfg" << endl;
 		cout << endl;
 		cout << "======================================================================================================================" << endl;
 		pause();
@@ -756,7 +627,7 @@ void loader_errors(string_view code) {
 		cout << "Status: 0xc00000004" << endl;
 		cout << "Info: REGISTRY_NOT_FOUND" << endl;
 		cout << endl;
-		cout << "File: \\Settings And System Files\\REG.cfg" << endl;
+		cout << "File: \\Settings And Server Files\\REG.cfg" << endl;
 		cout << endl;
 		cout << "======================================================================================================================" << endl;
 		pause();
@@ -774,7 +645,7 @@ void loader_errors(string_view code) {
 		cout << "Status: 0xc00000005" << endl;
 		cout << "Info: RESERVED_USERNAME_DETECTED" << endl;
 		cout << endl;
-		cout << "File: \\Settings And System Files\\SAM" << endl;
+		cout << "File: \\Settings And Server Files\\SAM" << endl;
 		cout << endl;
 		cout << "======================================================================================================================" << endl;
 		pause();
@@ -792,7 +663,7 @@ void loader_errors(string_view code) {
 		cout << "Status: 0xc00000007" << endl;
 		cout << "Info: BAD_SYSTEM_CONFIG_INFO" << endl;
 		cout << endl;
-		cout << "File: \\Settings And System Files\\REG.cfg" << endl;
+		cout << "File: \\Settings And Server Files\\REG.cfg" << endl;
 		cout << endl;
 		cout << "======================================================================================================================" << endl;
 		pause();
@@ -810,7 +681,7 @@ void loader_errors(string_view code) {
 		cout << "Status: 0xc00000008" << endl;
 		cout << "Info: KERNEL_INCOMPLETE" << endl;
 		cout << endl;
-		cout << "File: \\Settings And System Files\\SAM" << endl;
+		cout << "File: \\Settings And Server Files\\SAM" << endl;
 		cout << endl;
 		cout << "======================================================================================================================" << endl;
 		pause();
@@ -828,7 +699,7 @@ void loader_errors(string_view code) {
 		cout << "Status: 0xc00000010" << endl;
 		cout << "Info: KERNEL_LOCKED" << endl;
 		cout << endl;
-		cout << "File: \\Settings And System Files\\SAM" << endl;
+		cout << "File: \\Settings And Server Files\\SAM" << endl;
 		cout << endl;
 		cout << "======================================================================================================================" << endl;
 		pause();
@@ -846,7 +717,7 @@ void loader_errors(string_view code) {
 		cout << "Status: 0xc00000011" << endl;
 		cout << "Info: REGISTRY_LOCKED" << endl;
 		cout << endl;
-		cout << "File: \\Settings And System Files\\REG.cfg" << endl;
+		cout << "File: \\Settings And Server Files\\REG.cfg" << endl;
 		cout << endl;
 		cout << "======================================================================================================================" << endl;
 		pause();
@@ -864,7 +735,7 @@ void loader_errors(string_view code) {
 		cout << "Status: 0xc00000012" << endl;
 		cout << "Info: LOG_OVERFLOW" << endl;
 		cout << endl;
-		cout << "File: \\Settings And System Files\\system.log" << endl;
+		cout << "File: \\Settings And Server Files\\server.log" << endl;
 		cout << endl;
 		cout << "======================================================================================================================" << endl;
 		pause();
@@ -882,7 +753,7 @@ void loader_errors(string_view code) {
 		cout << "Status: 0xc00000013" << endl;
 		cout << "Info: BCD_CORRUPTED" << endl;
 		cout << endl;
-		cout << "File: \\Settings And System Files\\BCD" << endl;
+		cout << "File: \\Settings And Server Files\\BCD" << endl;
 		cout << endl;
 		cout << "======================================================================================================================" << endl;
 		pause();
@@ -900,7 +771,7 @@ void loader_errors(string_view code) {
 		cout << "Status: 0xc00000014" << endl;
 		cout << "Info: BCD_NOT_FOUND" << endl;
 		cout << endl;
-		cout << "File: \\Settings And System Files\\BCD" << endl;
+		cout << "File: \\Settings And Server Files\\BCD" << endl;
 		cout << endl;
 		cout << "======================================================================================================================" << endl;
 		pause();
@@ -918,7 +789,7 @@ void loader_errors(string_view code) {
 		cout << "Status: 0xc00000015" << endl;
 		cout << "Info: DRIVER_CRITICAL_FAILURE" << endl;
 		cout << endl;
-		cout << "File: \\Settings And System Files\\Drivers" << endl;
+		cout << "File: \\Settings And Server Files\\Drivers" << endl;
 		cout << endl;
 		cout << "======================================================================================================================" << endl;
 		pause();
@@ -1058,9 +929,8 @@ void Manual() {
 	cout << endl;
 	cout << "[ QUICK START ]" << endl;
 	cout << "  1. First run? Press R at BSoD then press 1 [Startup Repair]" << endl;
-	cout << "  2. complete OOBE (Out-Of-Box Experience) to create your user account." << endl;
-	cout << "  3. Login as your user." << endl;
-	cout << "  4. Type help for a list of commands." << endl;
+	cout << "  2. Login as SERVER (password On_isArslanius_Server)." << endl;
+	cout << "  3. Type help for a list of commands." << endl;
 	cout << endl;
 	cout << "[ ARSLANIUS BOOT MANAGER ]" << endl;
 	cout << "  - Press 1-7 to select mode" << endl;
@@ -1134,7 +1004,7 @@ void bsod(const string& code) {
 		setColor("17");
 		print_slow("*** STOP: 0x00000001a [0xc00000001a, 0x00000000, 0x00000000, 0x00000000]");
 		cout << endl;
-		print_slow("*** File: \\Settings And System Files");
+		print_slow("*** File: \\Settings And Server Files");
 		cout << endl;
 		print_slow("CONFIG_ROOT_NOT_FOUND - The config root is missing.");
 		print_slow("Please reinstall or run Startup Repair.");
@@ -1149,9 +1019,9 @@ void bsod(const string& code) {
 		setColor("17");
 		print_slow("*** STOP: 0x00000001 [0xc00000001, 0x00000000, 0x00000000, 0x00000000]");
 		cout << endl;
-		print_slow("*** File: \\Settings And System Files\\SAM");
+		print_slow("*** File: \\Settings And Server Files\\SAM");
 		cout << endl;
-		print_slow("KERNEL_NOT_FOUND - The SAM is missing.");
+		print_slow("SAM_NOT_FOUND - The SAM is missing.");
 		print_slow("Please reinstall or run Startup Repair.");
 		cout << endl;
 		print_slow("If this is the first time you've seen this error, restart the system.");
@@ -1164,13 +1034,13 @@ void bsod(const string& code) {
 		setColor("17");
 		print_slow("*** STOP: 0x00000002 [0xc00000002, 0x00000000, 0x00000000, 0x00000000]");
 		cout << endl;
-		print_slow("*** File: \\Settings And System Files\\SAM");
+		print_slow("*** File: \\Settings And Server Files\\SAM");
 		cout << endl;
-		print_slow("SYSTEM_ACCOUNT_HASH_MISMATCH - Someone's been playing with SAM in Notepad, huh?");
+		print_slow("SERVER_ACCOUNT_HASH_MISMATCH - Someone's been playing with SAM in Notepad, huh?");
 		print_slow("Please reinstall or run Startup Repair.");
 		cout << endl;
 		print_slow("Technical information:");
-		print_slow("*** Expected system hash: " + EXPECTED_SYSTEM_HASH);
+		print_slow("*** Expected server hash: " + EXPECTED_SERVER_HASH);
 		cout << endl;
 		print_slow("If this is the first time you've seen this error, restart the system.");
 		cout << endl;
@@ -1182,7 +1052,7 @@ void bsod(const string& code) {
 		setColor("17");
 		print_slow("*** STOP: 0x00000003 [0xc00000003, 0x00000000, 0x00000000, 0x00000000]");
 		cout << endl;
-		print_slow("*** File: \\Settings And System Files\\REG.cfg");
+		print_slow("*** File: \\Settings And Server Files\\REG.cfg");
 		cout << endl;
 		print_slow("REGISTRY_VERSION_MISMATCH - The version specified in the REG.cfg file is incorrect.");
 		print_slow("Please update(7) it to continue working.");
@@ -1201,7 +1071,7 @@ void bsod(const string& code) {
 		setColor("17");
 		print_slow("*** STOP: 0x00000004 [0xc00000004, 0x00000000, 0x00000000, 0x00000000]");
 		cout << endl;
-		print_slow("*** File: \\Settings And System Files\\REG.cfg");
+		print_slow("*** File: \\Settings And Server Files\\REG.cfg");
 		cout << endl;
 		print_slow("REGISTRY_NOT_FOUND - The REG.cfg is missing.");
 		print_slow("Please reinstall or run Startup Repair.");
@@ -1216,7 +1086,7 @@ void bsod(const string& code) {
 		setColor("04");
 		print_slow("*** STOP: 0x00000005 [0xc00000005, 0x00000000, 0x00000000, 0x00000000]");
 		cout << endl;
-		print_slow("*** File: \\Settings And System Files\\SAM");
+		print_slow("*** File: \\Settings And Server Files\\SAM");
 		cout << endl;
 		print_slow("RESERVED_USERNAME_DETECTED - Security violation!");
 		print_slow("Someone tried to create 'BarOS AUTHORITY' in SAM.");
@@ -1254,7 +1124,7 @@ void bsod(const string& code) {
 		setColor("17");
 		print_slow("*** STOP: 0x00000007 [0xc00000007, 0x00000000, 0x00000000, 0x00000000]");
 		cout << endl;
-		print_slow("*** File: \\Settings And System Files\\REG.cfg");
+		print_slow("*** File: \\Settings And Server Files\\REG.cfg");
 		cout << endl;
 		print_slow("BAD_SYSTEM_CONFIG_INFO - The registry is missing required entries.");
 		print_slow("OS_NAME, SYSTEM_COLOR, ADMIN_COLOR, USER_COLOR, ENABLE_LUA, LOCKDOWN, ADMIN_USER, SETUP or REG_VERSION");
@@ -1275,13 +1145,13 @@ void bsod(const string& code) {
 		setColor("17");
 		print_slow("*** STOP: 0x00000008 [0xc00000008, 0x00000000, 0x00000000, 0x00000000]");
 		cout << endl;
-		print_slow("*** File: \\Settings And System Files\\SAM");
+		print_slow("*** File: \\Settings And Server Files\\SAM");
 		cout << endl;
-		print_slow("KERNEL_INCOMPLETE - The kernel is missing required SYSTEM or ADMINISTRATOR entries.");
+		print_slow("KERNEL_INCOMPLETE - The kernel is missing required SERVER entries.");
 		print_slow("Someone deleted important lines from SAM. Probably with Notepad.");
 		cout << endl;
 		print_slow("Technical information:");
-		print_slow("*** Missing: SYSTEM or SYSTEM ADMINISTRATOR account");
+		print_slow("*** Missing: SERVER account");
 		print_slow("*** Kernel file found but incomplete.");
 		cout << endl;
 		print_slow("If this is the first time you've seen this error, restart the system.");
@@ -1314,7 +1184,7 @@ void bsod(const string& code) {
 		setColor("17");
 		print_slow("*** STOP: 0x00000010 [0xc00000010, 0x00000000, 0x00000000, 0x00000000]");
 		cout << endl;
-		print_slow("*** File: \\Settings And System Files\\SAM");
+		print_slow("*** File: \\Settings And Server Files\\SAM");
 		cout << endl;
 		print_slow("The kernel is full, run startup repair to reset it.");
 		print_slow("Looks like someone needed TOO many accounts.");
@@ -1335,7 +1205,7 @@ void bsod(const string& code) {
 		setColor("17");
 		print_slow("*** STOP: 0x00000011 [0xc00000011, 0x00000000, 0x00000000, 0x00000000]");
 		cout << endl;
-		print_slow("*** File: \\Settings And System Files\\REG.cfg");
+		print_slow("*** File: \\Settings And Server Files\\REG.cfg");
 		cout << endl;
 		print_slow("The registry is full, run startup repair to reset it.");
 		print_slow("Looks like someone filled the registry with all sorts of junk, huh?");
@@ -1356,10 +1226,10 @@ void bsod(const string& code) {
 		setColor("17");
 		print_slow("*** STOP: 0x00000012 [0xc00000012, 0x00000000, 0x00000000, 0x00000000]");
 		cout << endl;
-		print_slow("*** File: \\Settings And System Files\\system.log");
+		print_slow("*** File: \\Settings And Server Files\\server.log");
 		cout << endl;
 		print_slow("LOG_OVERFLOW - The system log is full of shit.");
-		print_slow("Someone's been writing a novel in system.log.");
+		print_slow("Someone's been writing a novel in server.log.");
 		print_slow("150 KB is the limit. Run Startup Repair to clear the log.");
 		cout << endl;
 		print_slow("Technical information:");
@@ -1377,7 +1247,7 @@ void bsod(const string& code) {
 		setColor("17");
 		print_slow("*** STOP: 0x00000013 [0xc00000013, 0x00000000, 0x00000000, 0x00000000]");
 		cout << endl;
-		print_slow("*** File: \\Settings And System Files\\BCD");
+		print_slow("*** File: \\Settings And Server Files\\BCD");
 		cout << endl;
 		print_slow("BCD_CORRUPTED - The BCD is missing required entries.");
 		print_slow("DEFAULT_MODE, BOOT_TIMEOUT, FAST_BOOT or DRIVER_LOAD_OFF is missing.");
@@ -1397,7 +1267,7 @@ void bsod(const string& code) {
 		setColor("17");
 		print_slow("*** STOP: 0x00000014 [0xc00000014, 0x00000000, 0x00000000, 0x00000000]");
 		cout << endl;
-		print_slow("*** File: \\Settings And System Files\\BCD");
+		print_slow("*** File: \\Settings And Server Files\\BCD");
 		cout << endl;
 		print_slow("BCD_NOT_FOUND - The BCD is missing.");
 		print_slow("Please reinstall or run Startup Repair.");
@@ -1412,7 +1282,7 @@ void bsod(const string& code) {
 		setColor("17");
 		print_slow("*** STOP: 0x00000015 [0xc00000015, 0x00000000, 0x00000000, 0x00000000]");
 		cout << endl;
-		print_slow("*** File: \\Settings And System Files\\Drivers");
+		print_slow("*** File: \\Settings And Server Files\\Drivers");
 		cout << endl;
 		print_slow("DRIVER_CRITICAL_FAILURE - A critical driver returned BAROS_CRITICAL (2).");
 		print_slow("Set DRIVER_LOAD_OFF=1 in BCD to disable all drivers.");
@@ -1640,7 +1510,7 @@ void bootMenu() {
 		check_AUTHORITY();
 		check_kernel();
 		string kernel_hash_check = readFile(kernelPath);
-		if (kernel_hash_check.find("SYSTEM = " + EXPECTED_SYSTEM_HASH) == string::npos) loader_errors("2");
+		if (kernel_hash_check.find("SERVER = " + EXPECTED_SERVER_HASH) == string::npos) loader_errors("2");
 		if (!fileExists(configRoot + "\\BCD")) {
 			loader_errors("14");
 		};
@@ -1734,12 +1604,12 @@ void safeModeBoot() {
 		return;
 	}
 
-	cout << "Loaded: \\Settings And System Files\\BCD" << endl;
-	if (fileExists(kernelPath)) cout << "Loaded: \\Settings And System Files\\SAM" << endl;
+	cout << "Loaded: \\Settings And Server Files\\BCD" << endl;
+	if (fileExists(kernelPath)) cout << "Loaded: \\Settings And Server Files\\SAM" << endl;
 	Sleep(1000);
-	if (fileExists(regPath)) cout << "Loaded: \\Settings And System Files\\REG.cfg" << endl;
+	if (fileExists(regPath)) cout << "Loaded: \\Settings And Server Files\\REG.cfg" << endl;
 	Sleep(1000);
-	cout << "Loaded: \\Settings And System Files\\systemprofile" << endl;
+	cout << "Loaded: \\Settings And Server Files\\systemprofile" << endl;
 	Sleep(1000);
 	cout << endl << "[ INFO ] Safe Mode enabled." << endl;
 	Sleep(1000);
@@ -1822,8 +1692,7 @@ void startupRepair() {
 
 	// Create SAM
 	stringstream kernel;
-	kernel << "SYSTEM = 57a98c0544492de7afb6aaa83cfa058c6b445e7c4c24127b13d2cfac748e1150" << endl;
-	kernel << "SYSTEM ADMINISTRATOR = 8e5a8afe96e11b2a6921cfd2af1dc2f1b78652a9a7c60de2d69cb2e523ca38da" << endl;
+	kernel << "SERVER = 4c312fd893fd392b7e38f0c4ea6d7f7003e0455d04c901f55749d2bc2cec8ddc" << endl;
 	writeFile(kernelPath, kernel.str());
 
 	// Create BCD
@@ -1889,7 +1758,7 @@ void restoreMenu() {
 
 	fs::copy_file(rpPath + "\\SAM", kernelPath, fs::copy_options::overwrite_existing);
 	fs::copy_file(rpPath + "\\REG.cfg", regPath, fs::copy_options::overwrite_existing);
-	fs::copy_file(rpPath + "\\system.log", logPath, fs::copy_options::overwrite_existing);
+	fs::copy_file(rpPath + "\\server.log", logPath, fs::copy_options::overwrite_existing);
 
 	writeLog("RESTORE_APPLIED_FROM_RECOVERY: " + rpSel);
 
@@ -1957,7 +1826,7 @@ void memoryDiag() {
 // =====================================================================
 
 void logonScreen() {
-	currentUser = "SYSTEM";
+	currentUser = "SERVER";
 	userHome = sysProf;
 	acpiRequest = 0;
 	vector<string> users;
@@ -1975,13 +1844,12 @@ void logonScreen() {
 			size_t eqPos = line.find('=');
 			if (eqPos != string::npos) {
 				string username = trim(line.substr(0, eqPos));
-				if (!username.empty() && username != "SYSTEM" && username != "SYSTEM ADMINISTRATOR") {
+				if (!username.empty() && username != "SERVER") {
 					users.push_back(username);
 				}
 			}
 		}
-		users.insert(users.begin(), "SYSTEM ADMINISTRATOR");
-		users.insert(users.begin(), "SYSTEM");
+		users.insert(users.begin(), "SERVER");
 	}
 
 	int selected = 3;
@@ -2007,11 +1875,8 @@ void logonScreen() {
 		else if (users[i] == "Rebootemer") {
 			cout << "[EMERGENCY REBOOT] Force restart ARSLANIUS" << endl;
 		}
-		else if (users[i] == "SYSTEM") {
-			cout << "BarOS AUTHORITY\\SYSTEM (System Account)" << endl;
-		}
-		else if (users[i] == "SYSTEM ADMINISTRATOR") {
-			cout << "SYSTEM ADMINISTRATOR (Administrator)" << endl;
+		else if (users[i] == "SERVER") {
+			cout << "BarOS AUTHORITY\\SERVER (Server Account)" << endl;
 		}
 		else {
 			cout << users[i] << endl;
@@ -2136,7 +2001,7 @@ void arslogon(string_view authority) {
 		check_AUTHORITY();
 		check_kernel();
 		string kernel_hash_check = readFile(kernelPath);
-		if (kernel_hash_check.find("SYSTEM = " + EXPECTED_SYSTEM_HASH) == string::npos) bsod("2");
+		if (kernel_hash_check.find("SERVER = " + EXPECTED_SERVER_HASH) == string::npos) bsod("2");
 		if (requestFromResume == 1) {
 			if (currentUser == "BarOS SERVICE\\TrustedInstaller" ||
 				currentUser == "BarOS SERVICE\\SysPulse" ||
@@ -2186,18 +2051,12 @@ void arslogon(string_view authority) {
 
 				currentUser = u_in;
 			}
-			if (currentUser == "SYSTEM") {
+			if (currentUser == "SERVER") {
 				if (requestFromResume == 0) {
 					userHome = sysProf;
 				}
-				currentUser = "BarOS AUTHORITY\\SYSTEM";
+				currentUser = "BarOS AUTHORITY\\SERVER";
 				regKey = "SYSTEM_COLOR";
-			}
-			else if (currentUser == "SYSTEM ADMINISTRATOR") {
-				if (requestFromResume == 0) {
-					userHome = usersRoot + "\\SYSTEM ADMINISTRATOR";
-				}
-				regKey = "ADMIN_COLOR";
 			}
 			else {
 				if (requestFromResume == 0) {
@@ -2244,7 +2103,7 @@ void arslogon(string_view authority) {
 				UnchangeableUserHome = userHome;
 			}
 			if (requestFromResume == 1) {
-				if (currentUser != "BarOS AUTHORITY\\SYSTEM") {
+				if (currentUser != "BarOS AUTHORITY\\SERVER") {
 					UnchangeableUserHome = usersRoot + "\\" + currentUser;
 				}
 				else {
@@ -2362,7 +2221,7 @@ void arslogon(string_view authority) {
 		}
 		cout << endl;
 
-		if (checkHash(a_p, EXPECTED_ADMIN_HASH)) {
+		if (checkHash(a_p, EXPECTED_SERVER_HASH)) {
 			writeLog("SUDO_EXEC: " + t_c + " BY " + currentUser);
 			ex_c = t_c;
 			sudo_command = 1;
@@ -2435,7 +2294,7 @@ void arslogon(string_view authority) {
 		if (acpiRequest == 1) shutdownScreen();
 		else if (acpiRequest == 2) rebootScreen();
 		else {
-			currentUser = "SYSTEM";
+			currentUser = "SERVER";
 			userHome = sysProf;
 			logonScreen();
 			return;
@@ -2600,8 +2459,7 @@ void cmdLoop() {
 					cout << "[BarOS SERVICE\\TrustedInstaller] Executing background repair..." << endl;
 					if (!fileExists(kernelPath)) {
 						stringstream kernel_ins;
-						kernel_ins << "SYSTEM = 57a98c0544492de7afb6aaa83cfa058c6b445e7c4c24127b13d2cfac748e1150" << endl;
-						kernel_ins << "SYSTEM ADMINISTRATOR = 8e5a8afe96e11b2a6921cfd2af1dc2f1b78652a9a7c60de2d69cb2e523ca38da" << endl;
+						kernel_ins << "SERVER = 4c312fd893fd392b7e38f0c4ea6d7f7003e0455d04c901f55749d2bc2cec8ddc" << endl;
 						writeFile(kernelPath, kernel_ins.str());
 					}
 					if (!fileExists(configRoot + "\\BCD")) {
@@ -2770,8 +2628,7 @@ void core(const string& cmd) {
 			cout << "Usage: sudo [command]" << endl;
 			return;
 		}
-		if (currentUser == "BarOS AUTHORITY\\SYSTEM" ||
-			currentUser == "SYSTEM ADMINISTRATOR" ||
+		if (currentUser == "BarOS AUTHORITY\\SERVER" ||
 			currentUser == "BarOS\\KERNEL" ||
 			currentUser == "BarOS SERVICE\\TrustedInstaller" ||
 			currentUser == "BarOS SERVICE\\SysPulse" ||
@@ -2877,31 +2734,8 @@ void core(const string& cmd) {
 		}
 	}
 
-	if (currentUser == "SYSTEM ADMINISTRATOR") {
-		bool allowed = false;
-		vector<string> adminCmds = { "help", "calc", "game.bsodrunner", "passwd", "confeditor", "license", "ping", "as-pack", "hibernate", "as-unpack", "wait_mode", "lockmenu",
-									 "echo", "autorun", "bcdedit", "bcdboot", "netstat",
-									 "ipconfig", "tracert", "nslookup", "arp", "route",
-									 "taskmgr", "sysinfo", "cp", "mv", "rm", "reset",
-									 "bsod", "touch", "mkdir", "ls", "cd", "cat", "ren",
-									 "backup", "backup-restore", "lock", "events",
-									 "reboot_to_recovery", "report", "cls", "ver", "whoami",
-									 "shutdown", "reboot", "adduser", "start", "sfc",
-									 "clean", "mail-read", "mail-send", "edit", "guest-toggle",
-									 "regedit", "deluser", "msg-all", "broadcast", "alert", "restore-point",
-									 "restore" };
-		for (const string& c : adminCmds) {
-			if (ex_c == c) { allowed = true; break; }
-		}
-		if (!allowed) {
-			cout << "[ SECURITY ] Restricted context." << endl;
-			return;
-		}
-	}
-
 	if (enableLua == 1 &&
-		currentUser != "BarOS AUTHORITY\\SYSTEM" &&
-		currentUser != "SYSTEM ADMINISTRATOR" &&
+		currentUser != "BarOS AUTHORITY\\SERVER" &&
 		currentUser != "BarOS\\KERNEL" &&
 		currentUser != adminUser &&
 		currentUser != "BarOS SERVICE\\TrustedInstaller" &&
@@ -3007,7 +2841,7 @@ void core(const string& cmd) {
 			return;
 		}
 		string hkernel = readFile(kernelPath);
-		if (hkernel.find(m_to + " =") == string::npos && hkernel.find(m_to + "=") == string::npos && m_to != "SYSTEM" && m_to != "SYSTEM ADMINISTRATOR") {
+		if (hkernel.find(m_to + " =") == string::npos && hkernel.find(m_to + "=") == string::npos && m_to != "SERVER") {
 			cout << "[ ERROR ] User not found." << endl;
 			return;
 		}
@@ -3018,11 +2852,8 @@ void core(const string& cmd) {
 			return;
 		}
 		string destPath;
-		if (m_to == "SYSTEM" || m_to == "BarOS AUTHORITY\\SYSTEM") {
+		if (m_to == "SERVER" || m_to == "BarOS AUTHORITY\\SERVER") {
 			destPath = sysProf;
-		}
-		else if (m_to == "SYSTEM ADMINISTRATOR") {
-			destPath = usersRoot + "\\SYSTEM ADMINISTRATOR";
 		}
 		else {
 			destPath = usersRoot + "\\" + m_to;
@@ -3256,7 +3087,7 @@ void core(const string& cmd) {
 			return;
 		}
 		report << "<html><body style='background:#111;color:#0f0;font-family:monospace'>" << endl;
-		report << "<h1>" << osName << " - SYSTEM REPORT</h1>" << endl;
+		report << "<h1>" << osName << " - SERVER REPORT</h1>" << endl;
 		report << "<hr>" << endl;
 		report << "<p>Build: " << currentBuild << "</p>" << endl;
 		report << "<p>Kernel: BarOS " << VersionBarOSkrnl << "</p>" << endl;
@@ -3265,7 +3096,7 @@ void core(const string& cmd) {
 		report << "<h2>Registered Users:</h2><pre>" << endl;
 		report << readFile(kernelPath) << endl;
 		report << "</pre>" << endl;
-		report << "<h2>System Log (last 50 lines):</h2><pre>" << endl;
+		report << "<h2>Server Log (last 50 lines):</h2><pre>" << endl;
 		string log = readFile(logPath);
 		istringstream iss(log);
 		string line;
@@ -3416,7 +3247,7 @@ void core(const string& cmd) {
 		writeFile(ConfigPath, config.str());
 		cout << "[ DONE ] user config updated." << endl;
 	}
-	else if (ex_c == "game.bsodrunner") BSOD_Runner();
+	else if (ex_c == "game.bsodrunner") cout << "It's a server, you idiot." << endl;
 	else if (ex_c == "reset") {
 		cout << "WARNING: This will delete ALL users and reset system to defaults. " << endl;
 		cout << "Type YES to continue: ";
@@ -3428,7 +3259,7 @@ void core(const string& cmd) {
 			userHome = rootPath;
 			SetCurrentDirectoryA(userHome.c_str());
 			try {
-				fs::path pathToRemove = rootPath + "\\Users";
+				fs::path pathToRemove = rootPath + "\\Server Users";
 				if (fs::exists(pathToRemove)) {
 					fs::remove_all(pathToRemove);
 				}
@@ -3467,7 +3298,7 @@ void core(const string& cmd) {
 		cout << "Username: ";
 		getline(cin, nu);
 		nu = trim(nu);
-		if (nu == "SYSTEM" || nu == "BarOS AUTHORITY\\SYSTEM" || nu == "SYSTEM ADMINISTRATOR") {
+		if (nu == "SERVER" || nu == "BarOS AUTHORITY\\SERVER") {
 			PlaySoundA("SystemHand", NULL, SND_ALIAS | SND_ASYNC);
 			cout << "[ ERROR ] Reserved username." << endl;
 			return;
@@ -3505,7 +3336,7 @@ void core(const string& cmd) {
 		cout << "Enter username: ";
 		getline(cin, du);
 		du = trim(du);
-		if (du == "SYSTEM" || du == "SYSTEM ADMINISTRATOR") {
+		if (du == "SERVER") {
 			PlaySoundA("SystemHand", NULL, SND_ALIAS | SND_ASYNC);
 			cout << "[ ERROR ] Restricted." << endl;
 			return;
@@ -3524,7 +3355,7 @@ void core(const string& cmd) {
 		cout << "[ OK ] User removed." << endl;
 	}
 	else if (ex_c == "passwd") {
-		if (currentUser == "BarOS AUTHORITY\\SYSTEM" ||
+		if (currentUser == "BarOS AUTHORITY\\SERVER" ||
 			currentUser.find("BarOS SERVICE") == 0) {
 			cout << "Cannot change this account's password." << endl;
 			return;
@@ -3600,7 +3431,7 @@ void core(const string& cmd) {
 		// Update kernel
 		string kernel = readFile(kernelPath);
 		string displayName = currentUser;
-		if (displayName == "BarOS AUTHORITY\\SYSTEM") displayName = "SYSTEM";
+		if (displayName == "BarOS AUTHORITY\\SERVER") displayName = "SERVER";
 
 		istringstream iss(kernel);
 		string line, newKernel;
@@ -3626,7 +3457,7 @@ void core(const string& cmd) {
 		fs::create_directories(rpDir);
 		fs::copy_file(kernelPath, rpDir + "\\SAM", fs::copy_options::overwrite_existing);
 		fs::copy_file(regPath, rpDir + "\\REG.cfg", fs::copy_options::overwrite_existing);
-		fs::copy_file(logPath, rpDir + "\\system.log", fs::copy_options::overwrite_existing);
+		fs::copy_file(logPath, rpDir + "\\server.log", fs::copy_options::overwrite_existing);
 
 		writeLog("RESTORE_POINT_CREATED: " + rpName);
 		cout << "[ OK ] Restore point created: " << rpName << endl;
@@ -3896,26 +3727,80 @@ void core(const string& cmd) {
 }
 
 void shutdownScreen() {
+	string reason_txt;
 	clearScreen();
-	setColor("9f");
-	cout << "\n\n\n\n\n\n\n\n\n                                               SHUTTING DOWN\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
-	cout << "                                               " << osName << endl;
-	Sleep(3000);
+	cout << "======================================================================================================================" << endl;
+	cout << "                                              SCHEDULED SHUTDOWN" << endl;
+	cout << "======================================================================================================================" << endl;
+	cout << endl;
+	cout << "Select shutdown reason:" << endl;
+	cout << endl;
+	cout << "[1] Hardware maintenance(CPU, RAM, disk replacement)" << endl;
+	cout << "[2] Software update(OS, drivers, applications)" << endl;
+	cout << "[3] Security update(patches, hotfixes)" << endl;
+	cout << "[4] Application installation / removal" << endl;
+	cout << "[5] Scheduled maintenance(regular upkeep)" << endl;
+	cout << "[6] Power failure / UPS initiated" << endl;
+	cout << "[7] The computer got so bad it decided to end its suffering" << endl;
+	cout << endl;
+	cout << "Enter reason number (1-7): ";
+	char shut_reason = _getch();
+
+	if (shut_reason == '1') reason_txt = "Hardware maintenance";
+	else if (shut_reason == '2') reason_txt = "Software update";
+	else if (shut_reason == '3') reason_txt = "Security update";
+	else if (shut_reason == '4') reason_txt = "Application installation/removal";
+	else if (shut_reason == '5') reason_txt = "Scheduled maintenance";
+	else if (shut_reason == '6') reason_txt = "Power failure / UPS initiated";
+	else if (shut_reason == '7') reason_txt = "The computer got so bad it decided to end its suffering";
+	else { shutdownScreen(); }
+	writeLog("SHUTDOWN_INITIATED_BY: " + currentUser);
+	writeLog("SHUTDOWN_REASON: " + reason_txt);
+	cout << endl;
+	cout << "[OK] Shutdown reason recorded. System will now shut down." << endl;
 	fs::remove(sysServices + "\\SysPulse.active");
 	fs::remove(sysServices + "\\TrustedInstaller.active");
 	fs::remove(sysServices + "\\NetMonitor.active");
+	Sleep(2000);
 	BarOSkrnl("ACPI");
 }
 
 void rebootScreen() {
+	string reason_txt;
 	clearScreen();
-	setColor("9f");
-	cout << "\n\n\n\n\n\n\n\n\n                                               SHUTTING DOWN\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
-	cout << "                                               " << osName << endl;
-	Sleep(3000);
+	cout << "======================================================================================================================" << endl;
+	cout << "                                              SCHEDULED REBOOT" << endl;
+	cout << "======================================================================================================================" << endl;
+	cout << endl;
+	cout << "Select reboot reason:" << endl;
+	cout << endl;
+	cout << "[1] Hardware maintenance(CPU, RAM, disk replacement)" << endl;
+	cout << "[2] Software update(OS, drivers, applications)" << endl;
+	cout << "[3] Security update(patches, hotfixes)" << endl;
+	cout << "[4] Application installation / removal" << endl;
+	cout << "[5] Scheduled maintenance(regular upkeep)" << endl;
+	cout << "[6] Power failure / UPS initiated" << endl;
+	cout << "[7] The computer got so bad it decided to end its suffering" << endl;
+	cout << endl;
+	cout << "shut_reason=Enter reason number (1-7): ";
+	char reboot_reason = _getch();
+
+	if (reboot_reason == '1') reason_txt = "Hardware maintenance";
+	else if (reboot_reason == '2') reason_txt = "Software update";
+	else if (reboot_reason == '3') reason_txt = "Security update";
+	else if (reboot_reason == '4') reason_txt = "Application installation/removal";
+	else if (reboot_reason == '5') reason_txt = "Scheduled maintenance";
+	else if (reboot_reason == '6') reason_txt = "Power failure / UPS initiated";
+	else if (reboot_reason == '7') reason_txt = "The computer got so bad it decided to end its suffering";
+	else { shutdownScreen(); }
+	writeLog("REBOOT_INITIATED_BY: " + currentUser);
+	writeLog("REBOOT_REASON: " + reason_txt);
+	cout << endl;
+	cout << "[OK] Restart reason recorded. System will now reboot." << endl;
 	fs::remove(sysServices + "\\SysPulse.active");
 	fs::remove(sysServices + "\\TrustedInstaller.active");
 	fs::remove(sysServices + "\\NetMonitor.active");
+	Sleep(2000);
 	BarOSkrnl("ACPI");
 }
 
@@ -4021,23 +3906,23 @@ void BarOSkrnl(string_view Kernel_mode) {
 				}
 			}
 		}
-		VersionBarOSkrnl = "24.1";
+		VersionBarOSkrnl = "25.2";
 		char buffer[MAX_PATH];
 		GetModuleFileNameA(NULL, buffer, MAX_PATH);
 		string_view exePath(buffer);
 		size_t lastSlash = exePath.find_last_of("\\/");
 		rootPath = exePath.substr(0, lastSlash);
 
-		configRoot = rootPath + "\\Settings And System Files";
+		configRoot = rootPath + "\\Settings And Server Files";
 		kernelPath = configRoot + "\\SAM";
-		usersRoot = rootPath + "\\Users";
+		usersRoot = rootPath + "\\Server Users";
 		programsRoot = rootPath + "\\Programs";
 		sysProf = configRoot + "\\systemprofile";
 		sysServices = sysProf;
 		regPath = configRoot + "\\REG.cfg";
-		logPath = configRoot + "\\system.log";
+		logPath = configRoot + "\\server.log";
 		restoreRoot = rootPath + "\\RestorePoints";
-		string OldKernelPath = rootPath + "\\Settings And System Files" + "\\kernel.dll";
+		string OldKernelPath = rootPath + "\\Settings And Server Files" + "\\kernel.dll";
 		if (fileExists(OldKernelPath)) fs::rename(OldKernelPath, kernelPath);
 
 		userHome = sysProf;
@@ -4377,7 +4262,7 @@ void BarOSkrnl(string_view Kernel_mode) {
 			fs::remove(configRoot + "\\hibernate.sys");
 			interfaceScreen();
 		}
-		if (currentUser == "BarOS AUTHORITY\\SYSTEM") currentUser = "SYSTEM";
+		if (currentUser == "BarOS AUTHORITY\\SERVER") currentUser = "SERVER";
 		clearScreen();
 		setColor("5b");
 		cout << "Enter password for " << currentUser << ": ";
