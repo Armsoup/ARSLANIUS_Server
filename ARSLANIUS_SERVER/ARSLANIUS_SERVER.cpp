@@ -196,7 +196,6 @@ void bootMenu();
 void normalBoot();
 void safeModeBoot();
 void recoveryEnv();
-void diagnosticMode(int mode);
 void startupRepair();
 void restoreMenu();
 void imageRecovery();
@@ -1417,16 +1416,14 @@ void bootMenu() {
 		cout << "  1. Start ARSLANIUS Normally" << endl;
 		cout << "  2. Safe Mode [No Services / No Autorun]" << endl;
 		cout << "  3. Recovery Environment" << endl;
-		cout << "  4. Diagnostic Mode LOCAL" << endl;
-		cout << "  5. Diagnostic Mode NETWORK" << endl;
 		cout << "----------------------------------------------------------------------------------------------------------------------" << endl;
 		cout << "  Auto-boot in " << bootTimeout << " seconds..." << endl;
-		cout << "  Press 6 for Manual" << endl;
-		cout << "  Press 7 for update from old version" << endl;
+		cout << "  Press 4 for Manual" << endl;
+		cout << "  Press 5 for update from old version" << endl;
 		cout << "======================================================================================================================" << endl;
 
 		// Simple timed input
-		cout << "Select option (1-7): ";
+		cout << "Select option (1-5): ";
 
 		// Simulate auto-boot with sleep
 		DWORD64 startTime = GetTickCount64();
@@ -1483,8 +1480,6 @@ void bootMenu() {
 	if (recoveryRequest == "1") bootChoice = 1;
 	if (bootChoice == 1) normalBoot();
 	else if (bootChoice == 2) safeModeBoot();
-	else if (bootChoice == 4) diagnosticMode(1);
-	else if (bootChoice == 5) diagnosticMode(2);
 }
 
 void normalBoot() {
